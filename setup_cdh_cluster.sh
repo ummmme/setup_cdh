@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #Author: kenneth.fang@gaopeng.com
-#Version: 1.0.0
+#Version: 1.0.1
 #CDH集群自动化安装脚本
 #要求：
 #1. 同目录下要有集群ip清单文件
@@ -14,7 +14,7 @@
 NODE_NAME_PREFIX="cdh";
 
 #集群IP清单文件
-CLUSTER_IP_LIST="cluster_list.txt";
+CLUSTER_IP_LIST="cluster.list";
 
 #Oracle JDK 1.8
 ORACLE_JDK_PACKAGE="jdk-8u172-linux-x64.tar.gz";
@@ -151,7 +151,10 @@ cat ${TMP_DIR}/hosts >> /etc/hosts;
 echo "$1" > /etc/hostname && hostname "$1";
 
 #设置开机重新source profile
-echo -e "cat ${TMP_DIR}/hosts >> /etc/hosts" >> /etc/rc.local;
+echo -e "
+#init from setup_cdh_cluster.sh ${CUR_DATE}.
+cat ${TMP_DIR}/hosts >> /etc/hosts
+" >> /etc/rc.local;
 
 #生成密钥
 printr "Gennerating ssh rsa key...";
@@ -178,7 +181,7 @@ curl -o /etc/yum.repos.d/cloudera-cdh5.repo https://archive.cloudera.com/cdh5/re
 
 #安装Java(所有节点)
 printr "Installing ORACLE JDK...";
-if ! rpm -qa | grep java; then
+if rpm -qa | grep java; then
     rpm -qa | grep java | rpm -e --nodeps
 fi
 
@@ -210,7 +213,7 @@ fi
 ln -s /usr/java/${jdkFolder}/bin/java /usr/bin/java
 
 #设置开机自动启用环境变量
-echo -e "\n#init from setup_cdh_cluster.sh ${CUR_DATE}. \nsource /etc/profile" >> /etc/rc.local
+echo -e "source /etc/profile" >> /etc/rc.local
 source /etc/profile;
 
 #设置SELinux(所有节点)
@@ -227,6 +230,12 @@ printr "Setting up CDH configuration...";
 echo 10 > /proc/sys/vm/swappiness
 echo never > /sys/kernel/mm/transparent_hugepage/defrag
 echo never > /sys/kernel/mm/transparent_hugepage/enabled
+
+echo -e "
+echo 10 > /proc/sys/vm/swappiness
+echo never > /sys/kernel/mm/transparent_hugepage/defrag
+echo never > /sys/kernel/mm/transparent_hugepage/enabled
+" >> /etc/rc.local
 
 #安装Mysql(仅master)
 if ! rpm -qa | grep mysql; then
@@ -464,7 +473,7 @@ cat > build_slave.sh << EOF
 cd ${TMP_DIR} || exit 1;
 cat ${TMP_DIR}/hosts >> /etc/hosts;
 echo $1 > /etc/hostname && hostname $1;
-echo -e "cat ${TMP_DIR}/hosts >> /etc/hosts" >> /etc/rc.local;
+echo -e "\n#init from setup_cdh_cluster.sh ${CUR_DATE}. \ncat ${TMP_DIR}/hosts >> /etc/hosts" >> /etc/rc.local;
 
 #关闭防火墙(所有节点)
 printr "Shutting down firewall...";
@@ -509,7 +518,7 @@ fi
 ln -s /usr/java/\${jdkFolder}/bin/java /usr/bin/java
 
 #设置开机自动启用环境变量
-echo -e "\n#init from setup_cdh_cluster.sh ${CUR_DATE}. \nsource /etc/profile" >> /etc/rc.local
+echo -e "source /etc/profile" >> /etc/rc.local
 source /etc/profile;
 
 #设置SELinux(所有节点)
@@ -526,6 +535,12 @@ echo "\n##Setting up CDH configuration...";
 echo 10 > /proc/sys/vm/swappiness
 echo never > /sys/kernel/mm/transparent_hugepage/defrag
 echo never > /sys/kernel/mm/transparent_hugepage/enabled
+
+echo -e "
+echo 10 > /proc/sys/vm/swappiness
+echo never > /sys/kernel/mm/transparent_hugepage/defrag
+echo never > /sys/kernel/mm/transparent_hugepage/enabled
+" >> /etc/rc.local
 
 #安装MySQL JDBC Driver(所有节点)
 if [ ! -f /usr/share/java/mysql-connector-java.jar ]; then
