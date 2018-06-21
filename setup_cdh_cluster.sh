@@ -564,20 +564,12 @@ EOF
 }
 
 
-
-
 #--------------------------------------------------------------------
 #检查环境
 ensureVariable;
 
 #生成集群机器名映射清单
 getHostnameList > ${TMP_DIR}/hosts;
-
-
-setUpSlave "cdh2" "10.0.11.4";
-
-exit;
-
 
 #开始配置
 nodeIndex=0;
@@ -589,14 +581,11 @@ do
 
     if [ $(ifconfig -a|grep inet|grep -v 127.0.0.1|grep -v inet6|awk '{print $2}'|tr -d "addr:") == ${serverIp} ];
     then
-        setUpMaster ${hostName} ${TMP_DIR};
+        setUpMaster ${hostName};
     else
         setUpSlave ${hostName} ${serverIp};
     fi
 done
-
-
-
 
 exit 1;
 
