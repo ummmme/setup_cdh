@@ -169,8 +169,8 @@ chmod 600 /root/.ssh/authorized_keys;
 
 #关闭防火墙(所有节点)
 printr "Shutting down firewall...";
-systemctl stop firewalld
-systemctl disable firewalld
+#systemctl stop firewalld
+#systemctl disable firewalld
 
 #设置源(所有节点)
 printr "Setting up yum repo...";
@@ -179,8 +179,8 @@ curl -o /etc/yum.repos.d/cloudera-cdh5.repo https://archive.cloudera.com/cdh5/re
 
 #安装Java(所有节点)
 printr "Installing ORACLE JDK...";
-if [ "$(rpm -qa | grep mysql | wc -l)" != "0" ] ; then
-    rpm -qa | grep java | xargs rpm -e --nodeps
+if ! rpm -qa | grep java; then
+    rpm -qa | grep java | rpm -e --nodeps
 fi
 
 if [ ! -d /usr/java ]; then
@@ -210,10 +210,9 @@ if [ -e /usr/bin/java ]; then
 fi
 ln -s /usr/java/${jdkFolder}/bin/java /usr/bin/java
 
-source /etc/profile;
-
 #设置开机自动启用环境变量
 echo -e "\n#init from setup_cdh_cluster.sh ${CUR_DATE}. \nsource /etc/profile" >> /etc/rc.local
+source /etc/profile;
 
 #设置SELinux(所有节点)
 printr "Setting up SELinux...";
@@ -231,7 +230,7 @@ echo never > /sys/kernel/mm/transparent_hugepage/defrag
 echo never > /sys/kernel/mm/transparent_hugepage/enabled
 
 #安装Mysql(仅master)
-if [ "$(rpm -qa | grep mysql | wc -l)" == "0" ] ; then
+if ! rpm -qa | grep mysql; then
     printr "Service mysqld NOT FOUND, prepare installing...";
     cd ${TMP_DIR} || exit 1;
     wget http://repo.mysql.com/mysql-community-release-el7-5.noarch.rpm
@@ -380,17 +379,17 @@ mysql -u root -e "source /opt/cdh_cluster_installer/create_cdh_mysql_db.sql" -p
 printr "Installing Cloudera Manager Deamon/Server/Agent...";
 cd ${CURRENT_DIR} || exit 1;
 
-if [ "$(rpm -qa | grep cloudera-manager-daemons | wc -l)" == "0" ]; then
+if ! rpm -qa | grep cloudera-manager-daemons; then
     yum -y install ${CLOUDERA_MANAGER_DEAMON} --nogpgcheck
 else
     echo "cloudera-manager-daemons package installed.";
 fi
-if [ "$(rpm -qa | grep cloudera-manager-server | wc -l)" == "0" ]; then
+if ! rpm -qa | grep cloudera-manager-server; then
     yum -y install ${CLOUDERA_MANAGER_SERVER} --nogpgcheck
 else
     echo "cloudera-manager-server package installed.";
 fi
-if [ "$(rpm -qa | grep cloudera-manager-agent | wc -l)" == "0" ]; then
+if ! rpm -qa | grep cloudera-manager-agent; then
     yum -y install ${CLOUDERA_MANAGER_AGENT} --nogpgcheck
 else
     echo "cloudera-manager-agent package installed.";
@@ -409,7 +408,7 @@ cp ${CURRENT_DIR}/${CDH_MANIFEST_JSON} /opt/cloudera/parcel-repo/
 cd /opt/cloudera/parcel-repo || exit 1;
 chown cloudera-scm:cloudera-scm ./*
 
-printr "congratulations: Master setup finished...";
+printr "congratulations: Master setup finished";
 
 #启动
 printr "Starting Cloudera, please wait...";
@@ -427,7 +426,7 @@ printr "copying rsa keys...";
 scp -o StrictHostKeyChecking=no -r /root/.ssh root@$1:/root/
 
 #创建slave上的临时目录
-printr "creating temp dir...";
+printr "creating temp dir in $1...";
 ssh -t -o StrictHostKeyChecking=no root@$1 > /dev/null 2>&1 << EOF
 mkdir -p ${TMP_DIR};
 EOF
@@ -438,8 +437,8 @@ scp -o StrictHostKeyChecking=no ${TMP_DIR}/hosts root@$1:${TMP_DIR}/hosts > /dev
 
 #复制rpm包 到slave的 临时目录
 printr "copying rpm packages to temp dir...";
-scp -o StrictHostKeyChecking=no ${CURRENT_DIR}/${CLOUDERA_MANAGER_DEAMON} root@$1:${TMP_DIR}/ > /dev/null 2>&1
-scp -o StrictHostKeyChecking=no ${CURRENT_DIR}/${CLOUDERA_MANAGER_AGENT} root@$1:${TMP_DIR}/ > /dev/null 2>&1
+#scp -o StrictHostKeyChecking=no ${CURRENT_DIR}/${CLOUDERA_MANAGER_DEAMON} root@$1:${TMP_DIR}/ > /dev/null 2>&1
+#scp -o StrictHostKeyChecking=no ${CURRENT_DIR}/${CLOUDERA_MANAGER_AGENT} root@$1:${TMP_DIR}/ > /dev/null 2>&1
 
 #复制Java
 printr "copying oracle jdk packages to temp dir...";
@@ -453,9 +452,9 @@ scp -o StrictHostKeyChecking=no ${CURRENT_DIR}/${MYSQL_JDBC_DRIVER} root@$1:${TM
 printr "copying repo files...";
 scp -o StrictHostKeyChecking=no /etc/yum.repos.d/cloudera-*.repo root@$1:${TMP_DIR}/
 
-#开始配置Slave
-printr "Start to configure slave: $1...";
-ssh -t -o StrictHostKeyChecking=no root@$1 << EOF
+#生成远程执行脚本并复制到slave的临时目录
+cd ${CURRENT_DIR} || exit 1;
+cat > build_slave.sh << EOF
 
 #设置别名
 cd ${TMP_DIR} || exit 1;
@@ -474,13 +473,15 @@ cp ${TMP_DIR}/cloudera-*.repo /etc/yum.repos.d/
 
 #安装Java(所有节点)
 echo -e "\n##Installing ORACLE JDK...";
-if [ "$(rpm -qa | grep java | wc -l)" != "0" ] ; then
+if ! rpm -qa | grep java; then
     rpm -qa | grep java | xargs rpm -e --nodeps
 fi
 if [ ! -d /usr/java ]; then
     mkdir -p /usr/java || exit 1;
 fi
-jdkFolder=$(tar zxvf ${ORACLE_JDK_PACKAGE} -C /usr/java | tail -n 1 | awk -F '/' '{print $1}');
+#解压
+tar zxvf ${TMP_DIR}/${ORACLE_JDK_PACKAGE} -C /usr/java
+jdkFolder=$(tar zxvf ${ORACLE_JDK_PACKAGE} -C /tmp | tail -n 1 | awk -F '/' '{print $1}');
 confBak "/etc/profile"  #TODO： 没有confBak函数
 
 #删除旧版本JAVA HOME 变量
@@ -494,15 +495,15 @@ fi
 
 #设置Java环境变量(所有节点)
 echo -e "
-export JAVA_HOME=/usr/java/${jdkFolder}
-export JRE_HOME=/usr/java/${jdkFolder}/jre
+export JAVA_HOME=/usr/java/\${jdkFolder}
+export JRE_HOME=/usr/java/\${jdkFolder}/jre
 export PATH=\$PATH:\$JAVA_HOME/bin:\$JRE_HOME/bin
 " >> /etc/profile
 
 if [ -e /usr/bin/java ]; then
     rm /usr/bin/java;
 fi
-ln -s /usr/java/${jdkFolder}/bin/java /usr/bin/java
+ln -s /usr/java/\${jdkFolder}/bin/java /usr/bin/java
 
 #设置开机自动启用环境变量
 echo -e "\n#init from setup_cdh_cluster.sh ${CUR_DATE}. \nsource /etc/profile" >> /etc/rc.local
@@ -537,21 +538,20 @@ echo -e "\n##MySQL JDBC Driver installed, jump to next step...";
 fi
 
 #安装rpm包
-echo -e "\n##installing rpms";
-yum -y update
+echo -e "\n##installing rpms...";
 
-if [ "$(rpm -qa | grep cloudera-manager-daemons | wc -l)" == "0" ]; then
+if ! rpm -qa | grep cloudera-manager-daemons; then
     yum -y install ${TMP_DIR}/${CLOUDERA_MANAGER_DEAMON} --nogpgcheck
 else
     echo "cloudera-manager-daemons package installed.";
 fi
-if [ "$(rpm -qa | grep cloudera-manager-agent | wc -l)" == "0" ]; then
+if ! rpm -qa | grep cloudera-manager-agent; then
     yum -y install ${TMP_DIR}/${CLOUDERA_MANAGER_AGENT} --nogpgcheck
 else
     echo "cloudera-manager-agent package installed.";
 fi
 
-#配置Master的机器名: cdh1
+#配置Master的机器名
 if grep -qe 'server_host=localhost' /etc/cloudera-scm-agent/config.ini; then
     sed -i "s/server_host=localhost/server_host=${NODE_NAME_PREFIX}1/g" /etc/cloudera-scm-agent/config.ini
 fi
@@ -561,8 +561,16 @@ service cloudera-scm-agent start
 
 exit 1;
 EOF
-}
 
+printr "copying setup scripts to $1...";
+chmod +x build_slave.sh
+scp -o StrictHostKeyChecking=no build_slave.sh root@$1:${TMP_DIR}/ > /dev/null 2>&1
+
+#开始配置Slave
+printr "Start to configure slave: $1...";
+ssh -t -o StrictHostKeyChecking=no root@$1 "${TMP_DIR}/build_slave.sh";
+
+}
 
 #--------------------------------------------------------------------
 #检查环境
@@ -586,6 +594,8 @@ do
         setUpSlave ${hostName} ${serverIp};
     fi
 done
+
+printr "All Steps finished. open the master's ip:7180 to continue...";
 
 exit 1;
 
