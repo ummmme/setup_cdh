@@ -13,7 +13,7 @@ sudo sh setup_cdh_cluster.sh
 ```
 
 ## Todo
-1. fix /etc/profile repeat
-2. fix /etc/rc.local repeat
-3. fix /root/.ssh/authorized_keys repeat
+1. fix the /etc/profile repeat issue
+2. fix the /etc/rc.local repeat issue
+3. fix the /root/.ssh/authorized_keys repeat issue
 
