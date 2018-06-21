@@ -350,7 +350,7 @@ GRANT ALL PRIVILEGES ON hue.* TO 'hue'@'%' IDENTIFIED BY 'hue_password';
 FLUSH PRIVILEGES;
 EOF
 
-#开启root 密码
+#开启MySQL root 密码
 printr "Enabling MySQL root user, please reset the root user password...";
 echo -e "
 -----------------------------------------------------------------
@@ -404,6 +404,10 @@ cp ${CURRENT_DIR}/${CDH_PARCEL} /opt/cloudera/parcel-repo/
 cp ${CURRENT_DIR}/${CDH_SHA} /opt/cloudera/parcel-repo/${CDH_SHA%%1}    #非常重要：将.sha1重命名为.sha文件
 cp ${CURRENT_DIR}/${CDH_MANIFEST_JSON} /opt/cloudera/parcel-repo/
 
+#删除原集群的guid
+if [ -e /var/lib/cloudera-scm-agent/cm_guid ]; then
+    rm -f /var/lib/cloudera-scm-agent/cm_guid;
+fi
 cd /opt/cloudera/parcel-repo || exit 1;
 chown cloudera-scm:cloudera-scm ./*
 
@@ -549,7 +553,11 @@ else
     echo "cloudera-manager-agent package installed.";
 fi
 
-#配置Master的机器名
+#配置集群
+echo "\n##configurating cloudera manager cluster...";
+if [ -e /var/lib/cloudera-scm-agent/cm_guid ]; then
+    rm -f /var/lib/cloudera-scm-agent/cm_guid;  #删除原集群的guid
+fi
 if grep -qe 'server_host=localhost' /etc/cloudera-scm-agent/config.ini; then
     sed -i "s/server_host=localhost/server_host=${NODE_NAME_PREFIX}1/g" /etc/cloudera-scm-agent/config.ini
 fi
