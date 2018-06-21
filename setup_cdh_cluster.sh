@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #Author: kenneth.fang@gaopeng.com
-#Version: 2018-06-19
+#Version: 1.0.0
 #CDH集群自动化安装脚本
 #要求：
 #1. 同目录下要有集群ip清单文件
