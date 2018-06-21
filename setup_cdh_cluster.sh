@@ -476,17 +476,17 @@ echo $1 > /etc/hostname && hostname $1;
 echo -e "\n#init from setup_cdh_cluster.sh ${CUR_DATE}. \ncat ${TMP_DIR}/hosts >> /etc/hosts" >> /etc/rc.local;
 
 #关闭防火墙(所有节点)
-printr "Shutting down firewall...";
+echo -e "\n##Shutting down firewall...";
 #systemctl stop firewalld
 #systemctl disable firewalld
 
 #设置源(所有节点)
-echo "\n##Setting up yum repo...";
+echo -e "\n##Setting up yum repo...";
 cp ${TMP_DIR}/cloudera-*.repo /etc/yum.repos.d/
 
 #安装Java(所有节点)
-echo "\n##Installing ORACLE JDK...";
-if ! rpm -qa | grep java; then
+echo -e "\n##Installing ORACLE JDK...";
+if rpm -qa | grep java; then
     rpm -qa | grep java | xargs rpm -e --nodeps
 fi
 if [ ! -d /usr/java ]; then
@@ -522,7 +522,7 @@ echo -e "source /etc/profile" >> /etc/rc.local
 source /etc/profile;
 
 #设置SELinux(所有节点)
-echo "\n##Setting up SELinux...";
+echo -e "\n##Setting up SELinux...";
 if grep -qe 'SELINUX=enforcing' /etc/selinux/config; then
     sed -i "s/SELINUX=enforcing/SELINUX=disabled/g" /etc/selinux/config
 fi
@@ -531,7 +531,7 @@ if grep -qe 'SELINUX=permissive' /etc/selinux/config; then
 fi
 
 #CDH 配置(所有节点)
-echo "\n##Setting up CDH configuration...";
+echo -e "\n##Setting up CDH configuration...";
 echo 10 > /proc/sys/vm/swappiness
 echo never > /sys/kernel/mm/transparent_hugepage/defrag
 echo never > /sys/kernel/mm/transparent_hugepage/enabled
@@ -545,18 +545,18 @@ echo never > /sys/kernel/mm/transparent_hugepage/enabled
 #安装MySQL JDBC Driver(所有节点)
 if [ ! -f /usr/share/java/mysql-connector-java.jar ]; then
 
-echo "\n##Installing MySQL JDBC Driver...";
+echo -e "\n##Installing MySQL JDBC Driver...";
 tar zxvf ${TMP_DIR}/${MYSQL_JDBC_DRIVER} -C ${TMP_DIR} > /dev/null 2>&1;
 mkdir -p /usr/share/java || exit 1;
 cp ${TMP_DIR}/mysql-connector-java-*/mysql-connector-java-*-bin.jar \
 /usr/share/java/mysql-connector-java.jar
 
 else
-echo "\n##MySQL JDBC Driver installed, jump to next step...";
+echo -e "\n##MySQL JDBC Driver installed, jump to next step...";
 fi
 
 #安装rpm包
-echo "\n##installing cloudera manager rpms...";
+echo -e "\n##installing cloudera manager rpms...";
 if ! rpm -qa | grep cloudera-manager-daemons; then
     yum -y install ${TMP_DIR}/${CLOUDERA_MANAGER_DEAMON} --nogpgcheck
 else
@@ -569,7 +569,7 @@ else
 fi
 
 #配置集群
-echo "\n##configurating cloudera manager cluster...";
+echo -e "\n##configurating cloudera manager cluster...";
 if [ -e /var/lib/cloudera-scm-agent/cm_guid ]; then
     rm -f /var/lib/cloudera-scm-agent/cm_guid;  #删除原集群的guid
 fi
