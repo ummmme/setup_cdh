@@ -171,8 +171,8 @@ chmod 600 /root/.ssh/authorized_keys;
 
 #关闭防火墙(所有节点)
 printr "Shutting down firewall...";
-#systemctl stop firewalld
-#systemctl disable firewalld
+systemctl stop firewalld
+systemctl disable firewalld
 
 #设置源(所有节点)
 printr "Setting up yum repo...";
@@ -477,8 +477,8 @@ echo -e "\n#init from setup_cdh_cluster.sh ${CUR_DATE}. \ncat ${TMP_DIR}/hosts >
 
 #关闭防火墙(所有节点)
 echo -e "\n##Shutting down firewall...";
-#systemctl stop firewalld
-#systemctl disable firewalld
+systemctl stop firewalld
+systemctl disable firewalld
 
 #设置源(所有节点)
 echo -e "\n##Setting up yum repo...";
