@@ -22,22 +22,22 @@ ORACLE_JDK_PACKAGE="jdk-8u172-linux-x64.tar.gz";
 #MySQL JDBC Connector
 MYSQL_JDBC_DRIVER="mysql-connector-java-5.1.41.tar.gz";
 
-#Cloudera Manager Deamon
+#Cloudera Manager Deamon, 下载地址： http://archive.cloudera.com/cm5/redhat/7/x86_64/cm/5.15.0/RPMS/x86_64/
 CLOUDERA_MANAGER_DEAMON="cloudera-manager-daemons-5.14.3-1.cm5143.p0.4.el7.x86_64.rpm";
 
-#Cloudera Manager Server
+#Cloudera Manager Server, 下载地址： http://archive.cloudera.com/cm5/redhat/7/x86_64/cm/5.15.0/RPMS/x86_64/
 CLOUDERA_MANAGER_SERVER="cloudera-manager-server-5.14.3-1.cm5143.p0.4.el7.x86_64.rpm";
 
-#Cloudera Manager Agent
+#Cloudera Manager Agent, 下载地址： http://archive.cloudera.com/cm5/redhat/7/x86_64/cm/5.15.0/RPMS/x86_64/
 CLOUDERA_MANAGER_AGENT="cloudera-manager-agent-5.14.3-1.cm5143.p0.4.el7.x86_64.rpm";
 
-#CDH 安装包
+#CDH 安装包, 下载地址： http://archive.cloudera.com/cdh5/parcels/latest/
 CDH_PARCEL="CDH-5.14.2-1.cdh5.14.2.p0.3-el7.parcel";
 
-#CDH sha 文件
+#CDH sha 文件， 下载地址: http://archive.cloudera.com/cdh5/parcels/latest/
 CDH_SHA="CDH-5.14.2-1.cdh5.14.2.p0.3-el7.parcel.sha1";
 
-#CDH manifest.json
+#CDH manifest.json, 下载地址： http://archive.cloudera.com/cdh5/parcels/latest/manifest.json
 CDH_MANIFEST_JSON="manifest.json";
 
 # DO NOT EDIT BELOW CONTENTS：
@@ -178,6 +178,8 @@ systemctl disable firewalld
 printr "Setting up yum repo...";
 curl -o /etc/yum.repos.d/cloudera-manager.repo https://archive.cloudera.com/cm5/redhat/7/x86_64/cm/cloudera-manager.repo
 curl -o /etc/yum.repos.d/cloudera-cdh5.repo https://archive.cloudera.com/cdh5/redhat/7/x86_64/cdh/cloudera-cdh5.repo
+yum -y update
+
 
 #安装Java(所有节点)
 printr "Installing ORACLE JDK...";
@@ -301,6 +303,9 @@ log-error=/var/log/mysqld.log
 pid-file=/var/run/mysqld/mysqld.pid
 sql_mode=STRICT_ALL_TABLES
 EOF
+
+printr "Restarting MySQL Server...";
+service mysqld restart > /dev/null 2>&1
 
 #安装MySQL JDBC Driver(全部节点)
 if [ ! -f /usr/share/java/mysql-connector-java.jar ]; then
@@ -612,7 +617,7 @@ do
     then
         setUpMaster ${hostName};
     else
-        setUpSlave ${hostName} ${serverIp};
+        setUpSlave ${hostName};
     fi
 done
 
