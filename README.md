@@ -13,7 +13,7 @@
     ```bash
     git clone https://github.com/abcfyk/setup_cdh.git
     ```
-3. 分别下载两个安装文件并放置在本项目的packages目录下：
+3. 分别下载两个安装文件并放置在本项目的packages目录下(体积较大，可选择第三方下载工具)：
     ```bash
     wget -P setup_cdh/packages http://archive.cloudera.com/cm5/redhat/7/x86_64/cm/5.15.1/RPMS/x86_64/cloudera-manager-daemons-5.15.1-1.cm5151.p0.3.el7.x86_64.rpm
     wget -P setup_cdh/packages http://archive.cloudera.com/cdh5/parcels/latest/CDH-5.15.1-1.cdh5.15.1.p0.4-el7.parcel 

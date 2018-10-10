@@ -28,10 +28,12 @@ CDH_MANIFEST_JSON="packages/manifest.json";
 #--------------------------------------------------------------------
 
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+CURRENT_IP=$(/sbin/ifconfig -a | grep inet | grep -v "127.0.0.1\|inet6\|0.0.0.0" | awk '{print $2}' | tr -d "addr:");
 CURRENT_DIR=$(pwd);
-TMP_DIR="/tmp/setup_cdh5_installer";
+TMP_DIR="/opt/cdh5_installer";
 CUR_DATE=$(date "+%Y%m%d")
 mkdir -p ${TMP_DIR};
+
 
 exitError() {
     echo "Error: $1, exit."; exit 1;
@@ -581,26 +583,23 @@ ensureVariable;
 #生成集群机器名映射清单
 getHostnameList > ${TMP_DIR}/hosts;
 
-#开始安装
-nodeIndex=0;
+#开始安装主节点
+printr "deploying ${CURRENT_IP}...";
+setUpMaster "${NODE_NAME_PREFIX}1";
+
+#配置从节点
+nodeIndex=1;
 for serverIp in `cat ${CURRENT_DIR}/ip.list`
 do
-    nodeIndex=`expr ${nodeIndex} + 1`;
-    hostName="${NODE_NAME_PREFIX}${nodeIndex}";
-    printr "server: ${serverIp} initing. hostname is ${hostName}";
-
-    curIp=$(/sbin/ifconfig -a | grep inet | grep -v "127.0.0.1\|inet6\|0.0.0.0" | awk '{print $2}' | tr -d "addr:");
-
-    if [ ${curIp} == ${serverIp} ];
+    if [ ${CURRENT_IP} != ${serverIp} ];
     then
-        #setUpMaster ${hostName};
-        echo   "master";
-    else
+        printr "deploying ${serverIp}...";
+        nodeIndex=`expr ${nodeIndex} + 1`;
+        hostName="${NODE_NAME_PREFIX}${nodeIndex}";
         #setUpSlave ${hostName};
         echo "slave";
     fi
 done
 
-printr "All Steps finished. open the master's public ip:7180 to continue...";
-
+printr "All Steps finished. open the http://${CURRENT_IP}:7180 to continue...";
 exit 1;
