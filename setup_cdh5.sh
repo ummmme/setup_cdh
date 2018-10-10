@@ -57,15 +57,6 @@ ensureVariable() {
       exitError "This script only supports CentOS/RHEL 7.x";
     fi
 
-    #确认master的IP为本机
-    echo "checking Master IP...";
-    masterIp=$(head -n 1 ${CURRENT_DIR}/ip.list);
-    curIp=$(/sbin/ifconfig -a | grep inet | grep -v "127.0.0.1\|inet6\|0.0.0.0" | awk '{print $2}' | tr -d "addr:");
-
-    if [ ${curIp} != ${masterIp} ]; then
-      exitError "Script must be run in master. try run this script on ${masterIp}";
-    fi
-
     #确认用户为root
     echo "checking ROOT USER...";
     if [ "$(id -u)" != 0 ]; then
@@ -590,7 +581,7 @@ ensureVariable;
 #生成集群机器名映射清单
 getHostnameList > ${TMP_DIR}/hosts;
 
-#开始配置
+#开始安装
 nodeIndex=0;
 for serverIp in `cat ${CURRENT_DIR}/ip.list`
 do
@@ -598,7 +589,9 @@ do
     hostName="${NODE_NAME_PREFIX}${nodeIndex}";
     printr "server: ${serverIp} initing. hostname is ${hostName}";
 
-    if [ $(/sbin/ifconfig -a | grep inet | grep -v "127.0.0.1\|inet6\|0.0.0.0" | awk '{print $2}' | tr -d "addr:") == ${serverIp} ];
+    curIp=$(/sbin/ifconfig -a | grep inet | grep -v "127.0.0.1\|inet6\|0.0.0.0" | awk '{print $2}' | tr -d "addr:");
+
+    if [ ${curIp} == ${serverIp} ];
     then
         #setUpMaster ${hostName};
         echo   "master";
