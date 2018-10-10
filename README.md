@@ -1,4 +1,6 @@
 # Cloudera CDH集群离线安装脚本
+* 2018-10-10 更新CDH5.15.1的支持 *
+
 
 ## 快速开始
 *关于其他语言版本的手册: [English](README-en.md), [简体中文](README.md).*
