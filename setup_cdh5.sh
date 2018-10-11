@@ -4,7 +4,7 @@
 #CDH集群离线安装脚本, 适用于Redhat/CentOS 7.x 64位版本
 
 #集群机器名前缀, 可自定义
-NODE_NAME_PREFIX="bigdata";
+NODE_NAME_PREFIX="bigdata-cdh";
 
 # 请勿修改以下内容：
 # --------------------------------------------------------------------
@@ -605,11 +605,9 @@ do
 
     if [ ${CURRENT_IP} == ${serverIp} ];
     then
-        #setUpMaster ${hostName};
-        echo "setUpMaster";
+        setUpMaster ${hostName};
     else
-        #setUpSlave ${hostName};
-        echo "setUpSlave";
+        setUpSlave ${hostName};
     fi
 done
 
