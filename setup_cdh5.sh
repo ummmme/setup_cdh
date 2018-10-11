@@ -71,8 +71,8 @@ ensureVariable() {
     #检查ORACLE JDK
     echo "checking Oracle JDK...";
     if [ ! -f ${CURRENT_DIR}/packages/${ORACLE_JDK_PACKAGE} ]; then
-        if [ ! -f jdk-8u*.tar.gz ]; then
-            ORACLE_JDK_PACKAGE=`ls ${CURRENT_DIR}/packages/jdk-8u*.tar.gz`;
+        if [ -f packages/jdk-8u*.tar.gz ]; then
+            ORACLE_JDK_PACKAGE=`ls packages/jdk-8u*.tar.gz`;
         else
             exitError "Oracle JDK NOT FOUND";
         fi
