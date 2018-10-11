@@ -70,7 +70,7 @@ ensureVariable() {
 
     #检查ORACLE JDK
     echo "checking Oracle JDK...";
-    if [ ! -f ${CURRENT_DIR}/packages/${ORACLE_JDK_PACKAGE} ]; then
+    if [ ! -f ${CURRENT_DIR}/${ORACLE_JDK_PACKAGE} ]; then
         if [ -f packages/jdk-8u*.tar.gz ]; then
             ORACLE_JDK_PACKAGE=`ls packages/jdk-8u*.tar.gz`;
         else
