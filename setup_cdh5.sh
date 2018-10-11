@@ -112,16 +112,16 @@ ensureVariable() {
 
 }
 
-
 #设置集群节点机器名
 getHostnameList() {
     nodeIndex=0;
-    cat ${CURRENT_DIR}/ip.list | \
-    while
-        read serverIp;
+    for ip in `cat setup_cdh/ip.list`
     do
-        nodeIndex=`expr ${nodeIndex} + 1`;
-        echo "${serverIp}  ${NODE_NAME_PREFIX}${nodeIndex}";
+        ipTrim=`$ip|sed s/[[:space:]]//g`
+        if [ ! -n "$ipTrim" ]; then
+            nodeIndex=`expr ${nodeIndex} + 1`;
+            echo "${ipTrim}  ${NODE_NAME_PREFIX}${nodeIndex}";
+        fi
     done
 }
 
