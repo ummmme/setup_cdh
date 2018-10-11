@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
 #Author: kenneth.fang@gaopeng.com
 #Version: 1.1.0
-#CDH集群离线安装脚本, 适用于Redhat/CentOS 7.x 64位版本，使用前请下载
-#CDH-5.15.1-1.cdh5.15.1.p0.4-el7.parcel 文件及
-#cloudera-manager-daemons-5.15.1-1.cm5151.p0.3.el7.x86_64.rpm，并放置在packages目录下
+#CDH集群离线安装脚本, 适用于Redhat/CentOS 7.x 64位版本
 
 #集群机器名前缀, 可自定义
 NODE_NAME_PREFIX="bigdata";
@@ -56,7 +54,7 @@ ensureVariable() {
     #确认系统版本
     echo "checking SYSTEM Version...";
     if ! grep -qs -e "release 7" /etc/redhat-release; then
-      exitError "This script only supports CentOS/RHEL 7.x";
+      exitError "Script only supports CentOS/RHEL 7.x";
     fi
 
     #确认用户为root
@@ -65,10 +63,19 @@ ensureVariable() {
       exitError "Script must run as root. Try 'sudo sh $0'";
     fi
 
-    #检查Java 安装包
+    #检查master
+    if [ $(head -n 1 ip.list) != ${CURRENT_IP} ]; then
+        exitError "Script must run on $(head -n 1 ip.list)";
+    fi
+
+    #检查ORACLE JDK
     echo "checking Oracle JDK...";
-    if [ ! -f ${CURRENT_DIR}/${ORACLE_JDK_PACKAGE} ]; then
-        exitError "Oracle JDK NOT FOUND";
+    if [ ! -f ${CURRENT_DIR}/packages/${ORACLE_JDK_PACKAGE} ]; then
+        if [ ! -f jdk-8u*.tar.gz ]; then
+            ORACLE_JDK_PACKAGE=`ls ${CURRENT_DIR}/packages/jdk-8u*.tar.gz`;
+        else
+            exitError "Oracle JDK NOT FOUND";
+        fi
     fi
 
     #检查MySQL JDBC 安装包
@@ -155,6 +162,8 @@ systemctl disable firewalld
 printr "Setting up yum repo...";
 curl -o /etc/yum.repos.d/cloudera-manager.repo https://archive.cloudera.com/cm5/redhat/7/x86_64/cm/cloudera-manager.repo
 curl -o /etc/yum.repos.d/cloudera-cdh5.repo https://archive.cloudera.com/cdh5/redhat/7/x86_64/cdh/cloudera-cdh5.repo
+rpm --import https://archive.cloudera.com/cm5/redhat/7/x86_64/cm/RPM-GPG-KEY-cloudera
+yum -y install htop iotop vim sysstat iftop screen
 yum -y update
 
 
@@ -464,8 +473,11 @@ systemctl stop firewalld
 systemctl disable firewalld
 
 #设置源(所有节点)
-echo -e "\n##Setting up yum repo...";
+echo -e "\n##Setting up cloudera repo...";
 cp ${TMP_DIR}/cloudera-*.repo /etc/yum.repos.d/
+rpm --import https://archive.cloudera.com/cm5/redhat/7/x86_64/cm/RPM-GPG-KEY-cloudera
+yum -y install htop iotop vim sysstat iftop screen
+yum -y update
 
 #安装Java(所有节点)
 echo -e "\n##Installing ORACLE JDK...";
@@ -583,23 +595,23 @@ ensureVariable;
 #生成集群机器名映射清单
 getHostnameList > ${TMP_DIR}/hosts;
 
-#开始安装主节点
-printr "deploying ${CURRENT_IP}...";
-setUpMaster "${NODE_NAME_PREFIX}1";
-
-#配置从节点
-nodeIndex=1;
+#开始安装
+nodeIndex=0;
 for serverIp in `cat ${CURRENT_DIR}/ip.list`
 do
-    if [ ${CURRENT_IP} != ${serverIp} ];
+    printr "deploying ${serverIp}...";
+    nodeIndex=`expr ${nodeIndex} + 1`;
+    hostName="${NODE_NAME_PREFIX}${nodeIndex}";
+
+    if [ ${CURRENT_IP} == ${serverIp} ];
     then
-        printr "deploying ${serverIp}...";
-        nodeIndex=`expr ${nodeIndex} + 1`;
-        hostName="${NODE_NAME_PREFIX}${nodeIndex}";
+        #setUpMaster ${hostName};
+        echo "setUpMaster";
+    else
         #setUpSlave ${hostName};
-        echo "slave";
+        echo "setUpSlave";
     fi
 done
 
-printr "All Steps finished. open the http://${CURRENT_IP}:7180 to continue...";
+printr "Congratulations! INSTALL FINISHED. open the http://${CURRENT_IP}:7180 to continue...";
 exit 1;
