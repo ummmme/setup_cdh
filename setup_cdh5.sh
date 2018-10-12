@@ -309,7 +309,7 @@ fi
 #创建CDH数据库(仅master)
 printr "Creating CDH require Components' DBs..."
 
-cat > /opt/cdh_cluster_installer/create_cdh_mysql_db.sql << EOF
+cat > ${TMP_DIR}/create_cdh_mysql_db.sql << EOF
 DROP DATABASE IF EXISTS scm;
 DROP DATABASE IF EXISTS amon;
 DROP DATABASE IF EXISTS rman;
@@ -372,7 +372,7 @@ read input
 
 #初始化CDH数据库
 printr "ENTER THE ROOT PASSWORD YOU JUST SET UP to create the cdh databases, ...";
-mysql -u root -e "source /opt/cdh_cluster_installer/create_cdh_mysql_db.sql" -p
+mysql -u root -e "source ${TMP_DIR}/create_cdh_mysql_db.sql" -p
 
 #开始安装Cloudera Manager Deamon/Server/Agent RPM 包
 printr "Installing Cloudera Manager Deamon/Server/Agent...";
