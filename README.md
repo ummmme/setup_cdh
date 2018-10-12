@@ -28,9 +28,9 @@
 6. 上传本项目到集群任意一台服务器(建议在ip.list文件中的第一台服务器)，准备安装
 
 7. 使用**ROOT**用户执行安装命令(安装过程中会要求输入集群其他服务器的root密码)
-       ```bash
-       sudo sh setup_cdh5.sh
-       ```
+   ```bash
+   sudo sh setup_cdh5.sh
+   ```
 
 ## TODO
 1. fix the /etc/profile repeat issue
