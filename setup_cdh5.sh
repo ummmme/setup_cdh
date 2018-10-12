@@ -484,10 +484,11 @@ fi
 if [ ! -d /usr/java ]; then
     mkdir -p /usr/java || exit 1;
 fi
+
 #解压
-tar zxvf ${TMP_DIR}/${ORACLE_JDK_PACKAGE} -C /usr/java > /dev/null 2>&1
-jdkFolder=$(tar zxvf ${ORACLE_JDK_PACKAGE} -C /tmp | tail -n 1 | awk -F '/' '{print $1}');
-/bin/cp -f "/etc/profile" "/etc/profile.old" 2>/dev/null;
+output=`tar zxvf ${TMP_DIR}/${ORACLE_JDK_PACKAGE} -C /usr/java/`
+jdkFolder=`echo $output | tail -n 1 | awk -F '/' '{print $1}'`
+/bin/cp -f /etc/profile /etc/profile.old;
 
 #删除旧版本JAVA HOME 变量
 if grep -qe 'JAVA_HOME' /etc/profile; then
@@ -499,9 +500,9 @@ fi
 
 #设置Java环境变量(所有节点)
 echo -e "
-export JAVA_HOME=/usr/java/\${jdkFolder}
-export JRE_HOME=/usr/java/\${jdkFolder}/jre
-export PATH=$PATH:\$JAVA_HOME/bin:\$JRE_HOME/bin
+export JAVA_HOME=/usr/java/${jdkFolder}
+export JRE_HOME=/usr/java/${jdkFolder}/jre
+export PATH=\$PATH:\$JAVA_HOME/bin:\$JRE_HOME/bin
 " >> /etc/profile
 
 if [ -e /usr/bin/java ]; then
