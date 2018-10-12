@@ -29,7 +29,7 @@
 
 7. 使用**ROOT**用户执行安装命令(安装过程中会要求输入集群其他服务器的root密码)
    ```bash
-   sudo sh setup_cdh5.sh
+   cd setup_cdh && sh setup_cdh5.sh
    ```
 
 ## TODO
