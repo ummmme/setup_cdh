@@ -81,7 +81,7 @@ ensureVariable() {
     echo "CHECK Oracle JDK...";
     if [ ! -f ${PACKAGES_PATH}/${ORACLE_JDK_PACKAGE} ]; then
         if [ -f ${PACKAGES_PATH}/jdk-8u*.tar.gz ]; then
-            ORACLE_JDK_PACKAGE=`ls ${PACKAGES_PATH}/jdk-8u*.tar.gz | awk -F '/' '{print $NF}' `;
+            ORACLE_JDK_PACKAGE=$(ls ${PACKAGES_PATH}/jdk-8u*.tar.gz | awk -F '/' '{print $NF}');
         else
             exitError "Oracle JDK NOT FOUND";
         fi
@@ -486,8 +486,8 @@ if [ ! -d /usr/java ]; then
 fi
 
 #解压
-output=`tar zxvf ${TMP_DIR}/${ORACLE_JDK_PACKAGE} -C /usr/java/`
-jdkFolder=`echo $output | tail -n 1 | awk -F '/' '{print $1}'`
+output=$(tar zxvf ${TMP_DIR}/${ORACLE_JDK_PACKAGE} -C /usr/java/);
+jdkFolder=$(echo $output | tail -n 1 | awk -F '/' '{print $1}');
 /bin/cp -f /etc/profile /etc/profile.old;
 
 #删除旧版本JAVA HOME 变量
