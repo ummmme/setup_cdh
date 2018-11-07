@@ -486,8 +486,8 @@ if [ ! -d /usr/java ]; then
 fi
 
 #解压
-output=$(tar zxvf ${TMP_DIR}/${ORACLE_JDK_PACKAGE} -C /usr/java/);
-jdkFolder=$(echo $output | tail -n 1 | awk -F '/' '{print $1}');
+output=\$(tar zxvf ${TMP_DIR}/${ORACLE_JDK_PACKAGE} -C /usr/java/);
+jdkFolder=\$(echo \$output | tail -n 1 | awk -F '/' '{print $1}');
 /bin/cp -f /etc/profile /etc/profile.old;
 
 #删除旧版本JAVA HOME 变量
@@ -500,14 +500,12 @@ fi
 
 #设置Java环境变量(所有节点)
 echo -e "
-export JAVA_HOME=/usr/java/${jdkFolder}
-export JRE_HOME=/usr/java/${jdkFolder}/jre
+export JAVA_HOME=/usr/java/\${jdkFolder}
+export JRE_HOME=/usr/java/\${jdkFolder}/jre
 export PATH=\$PATH:\$JAVA_HOME/bin:\$JRE_HOME/bin
 " >> /etc/profile
 
-if [ -e /usr/bin/java ]; then
-    rm /usr/bin/java;
-fi
+rm -f /usr/bin/java;
 ln -s /usr/java/\${jdkFolder}/bin/java /usr/bin/java
 
 #设置开机自动启用环境变量
