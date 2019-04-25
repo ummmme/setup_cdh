@@ -293,11 +293,11 @@ ssh -t -o StrictHostKeyChecking=no root@$1 "${TMP_DIR}/build_slave.sh";
 }
 
 #开始安装
-if [[  -z ${ALREADY_EXIST_NODE_NAME_LIST} ]]; then
+if [[ -z ${ALREADY_EXIST_NODE_NAME_LIST} ]]; then
     #1. 生成新节点host文件
     if [[ -r ${TMP_DIR}/hosts ]]; then
         printr "adding node to host file...";
-        startIndex=$(cat hosts | grep -v '^$' | wc -l);
+        startIndex=$(cat ${TMP_DIR}/hosts | grep -v '^$' | wc -l);
         nodeList=(${NODE_IP_LIST//,/ });
         for nodeIp in ${nodeList[@]} ; do
             hostName="${NODE_NAME_PREFIX}${NODE_NAME_INDEX_START}";
