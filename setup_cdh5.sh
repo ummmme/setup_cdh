@@ -119,7 +119,6 @@ ensureVariable() {
     #检查安装遗留
     echo "CHECK MySQL...";
 
-
 }
 
 #设置集群节点机器名
