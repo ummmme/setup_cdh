@@ -300,6 +300,7 @@ if [[ -z ${ALREADY_EXIST_NODE_NAME_LIST} ]]; then
         startIndex=$(cat ${TMP_DIR}/hosts | grep -v '^$' | wc -l);
         nodeList=(${NODE_IP_LIST//,/ });
         for nodeIp in ${nodeList[@]} ; do
+            ((NODE_NAME_INDEX_START++));
             hostName="${NODE_NAME_PREFIX}${NODE_NAME_INDEX_START}";
             echo  "${nodeIp} ${hostName}\n" >> ${TMP_DIR}/hosts;
         done
