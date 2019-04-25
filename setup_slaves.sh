@@ -294,29 +294,46 @@ ssh -t -o StrictHostKeyChecking=no root@$1 "${TMP_DIR}/build_slave.sh";
 
 #开始安装
 if [[ -z ${ALREADY_EXIST_NODE_NAME_LIST} ]]; then
-    #1. 生成新节点host文件
-    if [[ -r ${TMP_DIR}/hosts ]]; then
-        printr "adding node to host file...";
-        startIndex=$(cat ${TMP_DIR}/hosts | grep -v '^$' | wc -l);
-        nodeList=(${NODE_IP_LIST//,/ });
-        for nodeIp in ${nodeList[@]} ; do
-            ((NODE_NAME_INDEX_START++));
-            hostName="${NODE_NAME_PREFIX}${NODE_NAME_INDEX_START}";
-            echo  "${nodeIp} ${hostName}\n" >> ${TMP_DIR}/hosts;
-        done
-    else
+
+    if [[ ! -r ${TMP_DIR}/hosts ]]; then
         exitError  "hosts file NOT FOUND.";
     fi
+
+    #1. 生成新节点host文件
+    printr "creating new host file...";
+    tmpHostFile="${TMP_DIR}/hosts_tmp";
+    rm -f ${tmpHostFile};
+
+    existNodeCount=$(cat ${TMP_DIR}/hosts | grep -v '^$' | wc -l);
+    nodeList=(${NODE_IP_LIST//,/ });
+    for nodeIp in ${nodeList[@]} ; do
+        ((existNodeCount++));
+        hostName="${NODE_NAME_PREFIX}${existNodeCount}";
+        echo  "${nodeIp}  ${hostName}" >> ${tmpHostFile};
+    done
+
+    #2. 追加hosts到已有节点
+    printr "adding new hosts to exist hosts...";
+    cat ${TMP_DIR}/hosts | while read line
+    do
+        existNode=`echo ${line} | awk '{print $2}'`
+        scp -o StrictHostKeyChecking=no ${tmpHostFile} root@${existNode}:${TMP_DIR}/ > /dev/null 2>&1
+        ssh -t -o StrictHostKeyChecking=no root@${existNode} "cat ${tmpHostFile} >> /etc/hosts";
+    done
+
+    #3. #追加hosts到已有hosts文件，复制到新节点，开始安装
+    existNodeCount=$(cat ${TMP_DIR}/hosts | grep -v '^$' | wc -l);
+    cat ${tmpHostFile} >> ${TMP_DIR}/hosts && rm -f ${tmpHostFile};
+    for nodeIp in ${nodeList[@]} ; do
+        ((existNodeCount++));
+        printr "deploying ${nodeIp}...";
+        setUpSlave "${NODE_NAME_PREFIX}${existNodeCount}";
+    done
+
 fi
 
+printr "Congratulations! INSTALL FINISHED. open the http://${CURRENT_IP}:7180 to continue...";
+exit 0;
 
-#for serverIp in `cat ${PROJECT_PATH}/ip.list`
-#do
-#    printr "deploying ${serverIp}...";
-#    hostName="${NODE_NAME_PREFIX}${NODE_NAME_INDEX_START}";
-#    setUpSlave ${hostName};
-#    NODE_NAME_INDEX_START=`expr ${NODE_NAME_INDEX_START} + 1`;
-#done
-#
-#printr "Congratulations! INSTALL FINISHED. open the http://${CURRENT_IP}:7180 to continue...";
-#exit 1;
+
+
