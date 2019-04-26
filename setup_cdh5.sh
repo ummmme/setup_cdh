@@ -486,7 +486,7 @@ fi
 
 #解压
 output=\$(tar zxvf ${TMP_DIR}/${ORACLE_JDK_PACKAGE} -C /usr/java/);
-jdkFolder=\$(echo \$output | tail -n 1 | awk -F '/' '{print $1}');
+jdkFolder=\$(echo \$output | tail -n 1 | awk -F '/' '{print \$1}');
 /bin/cp -f /etc/profile /etc/profile.old;
 
 #删除旧版本JAVA HOME 变量
