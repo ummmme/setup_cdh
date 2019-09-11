@@ -2,12 +2,12 @@
 #Author: kenneth.fang@gaopeng.com
 #Version: 1.0.0
 #CDH集群追加计算节点脚本, 适用于Redhat/CentOS 7.x 64位版本，用于向已有集群追加节点
-#执行方式： 填写要安装CDH的节点IP清单， 并在主节点上执行本脚本
+#执行方式： 填写要安装CDH的节点IP清单， 并在主节点上执行本脚本,
 
 #集群机器名前缀, 可自定义，必须与已存在的集群机器名前缀一致
 NODE_NAME_PREFIX="cdh";
 
-# 已存在的集群机器名清单，如果是使用setup_cdh脚本安装的，可不填
+# 已存在的集群机器名清单，如果是使用setup_cdh脚本安装的，可不填，但必须确保/opt/setup_cdh_installer/hosts 文件中已经存在旧集群所有节点的host
 ALREADY_EXIST_NODE_NAME_LIST=""
 
 #要追加的节点IP， 以逗号分隔，将会被重命名为 前缀名 + 编号的形式
@@ -296,15 +296,17 @@ ssh -t -o StrictHostKeyChecking=no root@$1 "${TMP_DIR}/build_slave.sh";
 if [[ -z ${ALREADY_EXIST_NODE_NAME_LIST} ]]; then
 
     if [[ ! -r ${TMP_DIR}/hosts ]]; then
-        exitError  "hosts file NOT FOUND.";
+        exitError  "${TMP_DIR}/hosts file NOT FOUND.";
     fi
 
-    #1. 生成新节点host文件
+    #1. 生成新节点的追加host文件
     printr "creating new host file...";
-    tmpHostFile="${TMP_DIR}/hosts_tmp";
+    tmpHostFile="/tmp/hosts_tmp";
     rm -f ${tmpHostFile};
 
+    #获取已存在的主机数量
     existNodeCount=$(cat ${TMP_DIR}/hosts | grep -v '^$' | wc -l);
+    #命名新增节点
     nodeList=(${NODE_IP_LIST//,/ });
     for nodeIp in ${nodeList[@]} ; do
         ((existNodeCount++));
@@ -312,12 +314,12 @@ if [[ -z ${ALREADY_EXIST_NODE_NAME_LIST} ]]; then
         echo  "${nodeIp}  ${hostName}" >> ${tmpHostFile};
     done
 
-    #2. 追加hosts到已有节点
+    #2. 追加新增的hosts到已有节点
     printr "adding new hosts to exist hosts...";
     cat ${TMP_DIR}/hosts | while read line
     do
         existNode=`echo ${line} | awk '{print $2}'`
-        scp -o StrictHostKeyChecking=no ${tmpHostFile} root@${existNode}:${TMP_DIR}/ > /dev/null 2>&1
+        scp -t -o StrictHostKeyChecking=no ${tmpHostFile} root@${existNode}:${tmpHostFile} > /dev/null 2>&1
         ssh -t -o StrictHostKeyChecking=no root@${existNode} "cat ${tmpHostFile} >> /etc/hosts";
     done
 
