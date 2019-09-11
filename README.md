@@ -33,8 +33,4 @@
    cd setup_cdh && sh setup_cdh5.sh
    ```
 
-## TODO
-1. fix the /etc/profile repeat issue
-2. fix the /etc/rc.local repeat issue
-3. fix the /root/.ssh/authorized_keys repeat issue
-4. 
+

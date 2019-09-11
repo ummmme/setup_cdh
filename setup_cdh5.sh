@@ -52,6 +52,7 @@ printr() {
     echo; echo "## $1"; echo;
 }
 
+
 #确认系统参数
 ensureVariable() {
     #确认系统版本
@@ -62,25 +63,25 @@ ensureVariable() {
 
     #确认用户为root
     echo "CHECK ROOT USER...";
-    if [ "$(id -u)" != 0 ]; then
+    if [[ "$(id -u)" != 0 ]]; then
       exitError "Script must run as root. Try 'sudo sh $0'";
     fi
 
     #检查master
-    if [ $(head -n 1 ip.list) != ${CURRENT_IP} ]; then
+    if [[ $(head -n 1 ip.list) != ${CURRENT_IP} ]]; then
         exitError "Script must run on $(head -n 1 ip.list)";
     fi
 
     #检查是否为项目根目录
     echo "CHECK DIRECTORY...";
-    if [ $(pwd | awk -F '/' '{print $NF}') != ${PROJECT_NAME} ]; then
+    if [[ $(pwd | awk -F '/' '{print $NF}') != ${PROJECT_NAME} ]]; then
         exitError "Script must run at ROOT directory";
     fi
 
     #检查ORACLE JDK, 如果有其他版本的JDK，则继续安装
     echo "CHECK Oracle JDK...";
-    if [ ! -f ${PACKAGES_PATH}/${ORACLE_JDK_PACKAGE} ]; then
-        if [ -f ${PACKAGES_PATH}/jdk-8u*.tar.gz ]; then
+    if [[ ! -f ${PACKAGES_PATH}/${ORACLE_JDK_PACKAGE} ]]; then
+        if [[ -f ${PACKAGES_PATH}/jdk-8u*.tar.gz ]]; then
             ORACLE_JDK_PACKAGE=$(ls ${PACKAGES_PATH}/jdk-8u*.tar.gz | awk -F '/' '{print $NF}');
         else
             exitError "Oracle JDK NOT FOUND";
@@ -89,30 +90,30 @@ ensureVariable() {
 
     #检查MySQL JDBC 安装包
     echo "CHECK MySQL Connector...";
-    if [ ! -f ${PACKAGES_PATH}/${MYSQL_JDBC_DRIVER} ]; then
+    if [[ ! -f ${PACKAGES_PATH}/${MYSQL_JDBC_DRIVER} ]]; then
         exitError "MySQL Connector NOT FOUND";
     fi
 
     #检查cloudera manager rpm包
     echo "CHECK Cloudera Manager packages...";
-    if [ ! -f ${PACKAGES_PATH}/${CLOUDERA_MANAGER_DEAMON} ]; then
+    if [[ ! -f ${PACKAGES_PATH}/${CLOUDERA_MANAGER_DEAMON} ]]; then
         exitError "Cloudera Manager Deamon RPM NOT FOUND";
     fi
-    if [ ! -f ${PACKAGES_PATH}/${CLOUDERA_MANAGER_SERVER} ]; then
+    if [[ ! -f ${PACKAGES_PATH}/${CLOUDERA_MANAGER_SERVER} ]]; then
         exitError "Cloudera Manager Server RPM NOT FOUND";
     fi
-    if [ ! -f ${PACKAGES_PATH}/${CLOUDERA_MANAGER_AGENT} ]; then
+    if [[ ! -f ${PACKAGES_PATH}/${CLOUDERA_MANAGER_AGENT} ]]; then
         exitError "Cloudera Manager Agent RPM NOT FOUND";
     fi
 
     #检查CDH parcel包
-    if [ ! -f ${PACKAGES_PATH}/${CDH_PARCEL} ]; then
+    if [[ ! -f ${PACKAGES_PATH}/${CDH_PARCEL} ]]; then
         exitError "CDH Parcel FILE NOT FOUND";
     fi
-    if [ ! -f ${PACKAGES_PATH}/${CDH_SHA} ]; then
+    if [[ ! -f ${PACKAGES_PATH}/${CDH_SHA} ]]; then
         exitError "CDH SHA FILE NOT FOUND";
     fi
-    if [ ! -f ${PACKAGES_PATH}/${CDH_MANIFEST_JSON} ]; then
+    if [[ ! -f ${PACKAGES_PATH}/${CDH_MANIFEST_JSON} ]]; then
         exitError "CDH manifest.json FILE NOT FOUND";
     fi
 
@@ -142,10 +143,10 @@ echo "$1" > /etc/hostname && hostname "$1";
 
 #生成密钥
 printr "Gennerating ssh rsa key...";
-if [ -f /root/.ssh/id_rsa ]; then
+if [[ -f /root/.ssh/id_rsa ]]; then
     rm -f /root/.ssh/id_rsa;
 fi
-if [ -f /root/.ssh/id_rsa.pub ]; then
+if [[ -f /root/.ssh/id_rsa.pub ]]; then
     rm -f /root/.ssh/id_rsa.pub;
 fi
 
@@ -173,7 +174,7 @@ if rpm -qa | grep java; then
     rpm -qa | grep java | rpm -e --nodeps
 fi
 
-if [ ! -d /usr/java ]; then
+if [[ ! -d /usr/java ]]; then
     mkdir -p /usr/java || exitError "create java folder fail";
 fi
 jdkFolder=$(tar zxvf ${PACKAGES_PATH}/${ORACLE_JDK_PACKAGE} -C /usr/java | tail -n 1 | awk -F '/' '{print $1}')
@@ -195,10 +196,39 @@ export JRE_HOME=/usr/java/${jdkFolder}/jre
 export PATH=\$PATH:\$JAVA_HOME/bin:\$JRE_HOME/bin
 " >> /etc/profile
 
-if [ -e /usr/bin/java ]; then
+if [[ -e /usr/bin/java ]]; then
     confBak /usr/bin/java /usr/bin/java.bak-${CUR_DATE};
 fi
 ln -s /usr/java/${jdkFolder}/bin/java /usr/bin/java
+
+
+#安装Python3.6.2 到/usr/local下
+pythonV1=`python -V 2>&1|awk '{print $2}'|awk -F '.' '{print $1}'`;
+pythonV2=`python -V 2>&1|awk '{print $2}'|awk -F '.' '{print $2}'`;
+if [[ ${pythonV1} -ge 3 && ${pythonV2} -ge 6 ]]; then
+printr "Python3.6.2 already installed. ignore";
+else
+printr "Updating Python:" + python -V + " to Version: 3.6.2";
+yum -y install zlib-devel bzip2-devel openssl-devel ncurses-devel sqlite-devel readline-devel tk-devel gcc make;
+wget https://www.python.org/ftp/python/3.6.2/Python-3.6.2.tar.xz -O /usr/local/Python-3.6.2.tar.xz
+tar -zxvf /usr/local/Python-3.6.2.tar.xz
+cd /usr/local/Python-3.6.2
+./configure prefix=/usr/local/python3
+make && make install
+ln -s /usr/local/python3/bin/python3 /usr/bin/python3
+
+#安装pip3
+wget https://bootstrap.pypa.io/get-pip.py -C /usr/local/get-pip.py
+python3 /usr/local/get-pip.py
+
+#安装常用的库 TODO
+
+
+#修复yum依赖python2.7的问题 TODO
+
+
+fi
+
 
 #设置开机自动启用环境变量
 echo -e "source /etc/profile" >> /etc/rc.local
@@ -249,7 +279,6 @@ rm -f /var/lib/mysql/ib_logfile1
 confBak "/etc/my.cnf"
 
 cat > /etc/my.cnf <<EOF
-
 [mysqld]
 transaction-isolation = READ-COMMITTED
 # Disabling symbolic-links is recommended to prevent assorted security risks;
@@ -265,15 +294,18 @@ query_cache_type = 1
 max_connections = 550
 #expire_logs_days = 10
 #max_binlog_size = 100M
+
 #log_bin should be on a disk with enough free space. Replace '/var/lib/mysql/mysql_binary_log' with an appropriate path for your system
 #and chown the specified folder to the mysql user.
 log_bin=/var/lib/mysql/mysql_binary_log
+
 # For MySQL version 5.1.8 or later. For older versions, reference MySQL documentation for configuration help.
 binlog_format = mixed
 read_buffer_size = 2M
 read_rnd_buffer_size = 16M
 sort_buffer_size = 8M
 join_buffer_size = 8M
+
 # InnoDB settings
 innodb_file_per_table = 1
 innodb_flush_log_at_trx_commit  = 2
@@ -282,6 +314,7 @@ innodb_buffer_pool_size = 4G
 innodb_thread_concurrency = 8
 innodb_flush_method = O_DIRECT
 innodb_log_file_size = 512M
+
 [mysqld_safe]
 log-error=/var/log/mysqld.log
 pid-file=/var/run/mysqld/mysqld.pid
@@ -291,8 +324,8 @@ EOF
 printr "Restarting MySQL Server...";
 service mysqld restart > /dev/null 2>&1
 
-#安装MySQL JDBC Driver(全部节点) TODO
-if [ ! -f /usr/share/java/mysql-connector-java.jar ]; then
+#安装MySQL JDBC Driver(全部节点)
+if [[ ! -f /usr/share/java/mysql-connector-java.jar ]]; then
 
 printr "Installing MySQL JDBC Driver...";
 tar zxvf "${PACKAGES_PATH}/${MYSQL_JDBC_DRIVER}" -C "${TMP_DIR}/"
@@ -364,7 +397,6 @@ Press ENTER to continue while you are ready...
 ";
 
 read input
-
 /usr/bin/mysql_secure_installation
 
 #初始化CDH数据库
@@ -402,7 +434,7 @@ cp ${PACKAGES_PATH}/${CDH_MANIFEST_JSON} /opt/cloudera/parcel-repo/
 chown -R cloudera-scm:cloudera-scm /opt/cloudera/parcel-repo/*
 
 #删除原集群的guid
-if [ -e /var/lib/cloudera-scm-agent/cm_guid ]; then
+if [[ -e /var/lib/cloudera-scm && gent/cm_guid ]]; then
     rm -f /var/lib/cloudera-scm-agent/cm_guid;
 fi
 cd /opt/cloudera/parcel-repo || exit 1;
