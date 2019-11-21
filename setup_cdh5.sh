@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #Author: kenneth.fang@gaopeng.com
-#Version: 1.1.0
+#Version: 1.2.0，更新至CDH5.16.2版本
 #CDH集群离线安装脚本, 适用于Redhat/CentOS 7.x 64位版本
 
 #集群机器名前缀, 可自定义
@@ -8,21 +8,23 @@ NODE_NAME_PREFIX="cdh";
 
 # 请勿修改以下内容：
 # --------------------------------------------------------------------
+
+CLOUDERA_MANAGER_DEAMON="cloudera-manager-daemons-5.16.2-1.cm5162.p0.7.el7.x86_64.rpm";
+
+CLOUDERA_MANAGER_SERVER="cloudera-manager-server-5.16.2-1.cm5162.p0.7.el7.x86_64.rpm";
+
+CLOUDERA_MANAGER_AGENT="cloudera-manager-agent-5.16.2-1.cm5162.p0.7.el7.x86_64.rpm";
+
+CDH_PARCEL="CDH-5.16.2-1.cdh5.16.2.p0.8-el7.parcel";
+
+CDH_SHA="${CDH_PARCEL}.sha";
+
+CDH_MANIFEST_JSON="manifest.json";
+
 ORACLE_JDK_PACKAGE="jdk-8u181-linux-x64.tar.gz";
 
 MYSQL_JDBC_DRIVER="mysql-connector-java-5.1.47.tar.gz";
 
-CLOUDERA_MANAGER_DEAMON="cloudera-manager-daemons-5.15.1-1.cm5151.p0.3.el7.x86_64.rpm";
-
-CLOUDERA_MANAGER_SERVER="cloudera-manager-server-5.15.1-1.cm5151.p0.3.el7.x86_64.rpm";
-
-CLOUDERA_MANAGER_AGENT="cloudera-manager-agent-5.15.1-1.cm5151.p0.3.el7.x86_64.rpm";
-
-CDH_PARCEL="CDH-5.15.1-1.cdh5.15.1.p0.4-el7.parcel";
-
-CDH_SHA="CDH-5.15.1-1.cdh5.15.1.p0.4-el7.parcel.sha";
-
-CDH_MANIFEST_JSON="manifest.json";
 #--------------------------------------------------------------------
 
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin";

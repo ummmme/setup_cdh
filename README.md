@@ -20,9 +20,9 @@
     wget -P setup_cdh/packages https://archive.cloudera.com/cm5/redhat/7/x86_64/cm/5.16.2/RPMS/x86_64/cloudera-manager-daemons-5.16.2-1.cm5162.p0.7.el7.x86_64.rpm
     wget -P setup_cdh/packages http://archive.cloudera.com/cdh5/parcels/latest/CDH-5.16.2-1.cdh5.16.2.p0.8-el7.parcel 
     ```
-4. 下载Cloudera 为CDH6.x 提供的ORACLE JDK1.8
+4. 下载ORACLE JDK 1.8(只支持64bit版本，最低支持8u74，建议为8u181)
     ```bash
-    wget -P setup_cdh/packages https://archive.cloudera.com/cm6/6.3.1/redhat7/yum/RPMS/x86_64/oracle-j2sdk1.8-1.8.0+update181-1.x86_64.rpm
+    wget -P setup_cdh/packages http://download.oracle.com/otn-pub/java/jdk/8u181-b13/96a7b8442fe848ef90c96a2fad6ed6d1/jdk-8u181-linux-x64.tar.gz
     ```
 5. 编辑根目录下的ip.list文件，填写集群节点的内网地址，每行一个
 
