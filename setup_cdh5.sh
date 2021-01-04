@@ -4,7 +4,7 @@
 #CDH集群离线安装脚本, 适用于Redhat/CentOS 7.x 64位版本
 
 #集群机器名前缀, 可自定义
-NODE_NAME_PREFIX="cdh";
+read -p "$(echo -e "输入集群前缀名，所有节点的hostname将被统一命名[前缀名+数字]的形式:")" NODE_NAME_PREFIX;
 
 # 请勿修改以下内容：
 # --------------------------------------------------------------------
@@ -50,7 +50,7 @@ confBak() {
     /bin/cp -f "$1" "$1.bak.${CUR_DATE}" 2>/dev/null;
 }
 
-printr() {
+INFO() {
     echo; echo "## $1"; echo;
 }
 
@@ -58,30 +58,31 @@ printr() {
 #确认系统参数
 ensureVariable() {
     #确认系统版本
-    echo "CHECK SYSTEM Version...";
+    echo "ensureVariable: 1. CHECK SYSTEM Version...";
     if ! grep -qs -e "release 7" /etc/redhat-release; then
       exitError "Script only supports CentOS/RHEL 7.x";
     fi
 
     #确认用户为root
-    echo "CHECK ROOT USER...";
+    echo "ensureVariable: 2. CHECK ROOT USER...";
     if [[ "$(id -u)" != 0 ]]; then
       exitError "Script must run as root. Try 'sudo sh $0'";
     fi
 
     #检查master
+    echo "ensureVariable: 3. CHECK CURRENT IP...";
     if [[ $(head -n 1 ip.list) != ${CURRENT_IP} ]]; then
         exitError "Script must run on $(head -n 1 ip.list)";
     fi
 
     #检查是否为项目根目录
-    echo "CHECK DIRECTORY...";
+    echo "ensureVariable: 4. CHECK DIRECTORY...";
     if [[ $(pwd | awk -F '/' '{print $NF}') != ${PROJECT_NAME} ]]; then
         exitError "Script must run at ROOT directory";
     fi
 
     #检查ORACLE JDK, 如果有其他版本的JDK，则继续安装
-    echo "CHECK Oracle JDK...";
+    echo "ensureVariable: 5. CHECK Oracle JDK...";
     if [[ ! -f ${PACKAGES_PATH}/${ORACLE_JDK_PACKAGE} ]]; then
         if [[ -f ${PACKAGES_PATH}/jdk-8u*.tar.gz ]]; then
             ORACLE_JDK_PACKAGE=$(ls ${PACKAGES_PATH}/jdk-8u*.tar.gz | awk -F '/' '{print $NF}');
@@ -91,13 +92,13 @@ ensureVariable() {
     fi
 
     #检查MySQL JDBC 安装包
-    echo "CHECK MySQL Connector...";
+    echo "ensureVariable: 6. CHECK MySQL Connector...";
     if [[ ! -f ${PACKAGES_PATH}/${MYSQL_JDBC_DRIVER} ]]; then
         exitError "MySQL Connector NOT FOUND";
     fi
 
     #检查cloudera manager rpm包
-    echo "CHECK Cloudera Manager packages...";
+    echo "ensureVariable: 7. CHECK Cloudera Manager packages...";
     if [[ ! -f ${PACKAGES_PATH}/${CLOUDERA_MANAGER_DEAMON} ]]; then
         exitError "Cloudera Manager Deamon RPM NOT FOUND";
     fi
@@ -109,6 +110,7 @@ ensureVariable() {
     fi
 
     #检查CDH parcel包
+    echo "ensureVariable: 8. CHECK CDH parcel packages...";
     if [[ ! -f ${PACKAGES_PATH}/${CDH_PARCEL} ]]; then
         exitError "CDH Parcel FILE NOT FOUND";
     fi
@@ -120,7 +122,7 @@ ensureVariable() {
     fi
 
     #检查安装遗留
-    echo "CHECK MySQL...";
+    echo "ensureVariable: 9. CHECK MySQL...";
 
 }
 
@@ -139,12 +141,12 @@ getHostnameList() {
 setUpMaster() {
 
 #设置机器名
-printr "Setting up hostname...";
+INFO "Setting up hostname...";
 cat ${TMP_DIR}/hosts >> /etc/hosts;
 echo "$1" > /etc/hostname && hostname "$1";
 
 #生成密钥
-printr "Gennerating ssh rsa key...";
+INFO "Gennerating ssh rsa key...";
 if [[ -f /root/.ssh/id_rsa ]]; then
     rm -f /root/.ssh/id_rsa;
 fi
@@ -157,12 +159,12 @@ cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys;
 chmod 600 /root/.ssh/authorized_keys;
 
 #关闭防火墙(所有节点)
-printr "Shutting down firewall...";
+INFO "Shutting down firewall...";
 systemctl stop firewalld
 systemctl disable firewalld
 
 #设置源(所有节点)
-printr "Setting up Cloudera Manager Repository...";
+INFO "Setting up Cloudera Manager Repository...";
 cp ${PACKAGES_PATH}/cloudera-manager.repo /etc/yum.repos.d/
 cp ${PACKAGES_PATH}/cloudera-cdh5.repo /etc/yum.repos.d/
 rpm --import https://archive.cloudera.com/cm5/redhat/7/x86_64/cm/RPM-GPG-KEY-cloudera
@@ -171,7 +173,7 @@ yum -y update
 
 
 #安装Java(所有节点)
-printr "Installing ORACLE JDK...";
+INFO "Installing ORACLE JDK...";
 if rpm -qa | grep java; then
     rpm -qa | grep java | rpm -e --nodeps
 fi
@@ -193,8 +195,8 @@ fi
 
 #设置Java环境变量(所有节点)
 echo -e "
-export JAVA_HOME=/usr/java/${jdkFolder}
-export JRE_HOME=/usr/java/${jdkFolder}/jre
+export JAVA_HOME=/usr/java/jdk1.8.0_121
+export JRE_HOME=/usr/java/jdk1.8.0_121/jre
 export PATH=\$PATH:\$JAVA_HOME/bin:\$JRE_HOME/bin
 " >> /etc/profile
 
@@ -203,41 +205,12 @@ if [[ -e /usr/bin/java ]]; then
 fi
 ln -s /usr/java/${jdkFolder}/bin/java /usr/bin/java
 
-
-#安装Python3.6.2 到/usr/local下
-pythonV1=`python -V 2>&1|awk '{print $2}'|awk -F '.' '{print $1}'`;
-pythonV2=`python -V 2>&1|awk '{print $2}'|awk -F '.' '{print $2}'`;
-if [[ ${pythonV1} -ge 3 && ${pythonV2} -ge 6 ]]; then
-printr "Python3.6.2 already installed. ignore";
-else
-printr "Updating Python:" + python -V + " to Version: 3.6.2";
-yum -y install zlib-devel bzip2-devel openssl-devel ncurses-devel sqlite-devel readline-devel tk-devel gcc make;
-wget https://www.python.org/ftp/python/3.6.2/Python-3.6.2.tar.xz -O /usr/local/Python-3.6.2.tar.xz
-tar -zxvf /usr/local/Python-3.6.2.tar.xz
-cd /usr/local/Python-3.6.2
-./configure prefix=/usr/local/python3
-make && make install
-ln -s /usr/local/python3/bin/python3 /usr/bin/python3
-
-#安装pip3
-wget https://bootstrap.pypa.io/get-pip.py -C /usr/local/get-pip.py
-python3 /usr/local/get-pip.py
-
-#安装常用的库 TODO
-
-
-#修复yum依赖python2.7的问题 TODO
-
-
-fi
-
-
 #设置开机自动启用环境变量
 echo -e "source /etc/profile" >> /etc/rc.local
 source /etc/profile;
 
 #设置SELinux(所有节点)
-printr "Setting up SELinux...";
+INFO "Setting up SELinux...";
 if grep -qe 'SELINUX=enforcing' /etc/selinux/config; then
     sed -i "s/SELINUX=enforcing/SELINUX=disabled/g" /etc/selinux/config
 fi
@@ -246,7 +219,7 @@ if grep -qe 'SELINUX=permissive' /etc/selinux/config; then
 fi
 
 #CDH 配置(所有节点)
-printr "Setting up CDH configuration...";
+INFO "Setting up CDH configuration...";
 echo 10 > /proc/sys/vm/swappiness
 echo never > /sys/kernel/mm/transparent_hugepage/defrag
 echo never > /sys/kernel/mm/transparent_hugepage/enabled
@@ -259,13 +232,13 @@ echo never > /sys/kernel/mm/transparent_hugepage/enabled
 
 #安装Mysql(仅master)
 if ! rpm -qa | grep mysql; then
-    printr "Service mysqld NOT FOUND, prepare installing...";
+    INFO "Service mysqld NOT FOUND, prepare installing...";
     wget -P ${TMP_DIR}/ http://repo.mysql.com/mysql-community-release-el7-5.noarch.rpm
     sudo rpm -ivh ${TMP_DIR}/mysql-community-release-el7-5.noarch.rpm
     yum -y install mysql-server
     service mysqld start
 else
-    printr "Service mysqld FOUNDED. jump to next step...";
+    INFO "Service mysqld FOUNDED. jump to next step...";
 fi
 
 cat <<'EOF'
@@ -274,7 +247,7 @@ press Ctrl-C to abort. Then re-run it.
 EOF
 
 #配置MySQL(Master)
-printr "Configurating MySQL...";
+INFO "Configurating MySQL...";
 rm -f /var/lib/mysql/ib_logfile0
 rm -f /var/lib/mysql/ib_logfile1
 
@@ -323,23 +296,23 @@ pid-file=/var/run/mysqld/mysqld.pid
 sql_mode=STRICT_ALL_TABLES
 EOF
 
-printr "Restarting MySQL Server...";
+INFO "Restarting MySQL Server...";
 service mysqld restart > /dev/null 2>&1
 
 #安装MySQL JDBC Driver(全部节点)
 if [[ ! -f /usr/share/java/mysql-connector-java.jar ]]; then
 
-printr "Installing MySQL JDBC Driver...";
+INFO "Installing MySQL JDBC Driver...";
 tar zxvf "${PACKAGES_PATH}/${MYSQL_JDBC_DRIVER}" -C "${TMP_DIR}/"
 mkdir -p /usr/share/java || exitError "CREATE MySQL FOLDER FAILED";
 cp ${TMP_DIR}/mysql-connector-java-*/mysql-connector-java-*-bin.jar /usr/share/java/mysql-connector-java.jar
 
 else
-printr "MySQL JDBC Driver installed, jump to next step...";
+INFO "MySQL JDBC Driver installed, jump to next step...";
 fi
 
 #创建CDH数据库(仅master)
-printr "Creating CDH require Components' DBs..."
+INFO "Creating CDH require Components' DBs..."
 
 cat > ${TMP_DIR}/create_cdh_mysql_db.sql << EOF
 DROP DATABASE IF EXISTS scm;
@@ -379,11 +352,14 @@ GRANT ALL PRIVILEGES ON oozie.* TO 'oozie'@'%' IDENTIFIED BY 'oozie_password';
 CREATE DATABASE hue DEFAULT CHARACTER SET utf8 DEFAULT COLLATE utf8_general_ci;
 GRANT ALL PRIVILEGES ON hue.* TO 'hue'@'%' IDENTIFIED BY 'hue_password';
 
+CREATE DATABASE cloudera_am DEFAULT CHARACTER SET utf8 DEFAULT COLLATE utf8_general_ci;
+GRANT ALL PRIVILEGES ON cloudera_am.* TO 'cloudera_am'@'%' IDENTIFIED BY 'cloudera_am_password';
+
 FLUSH PRIVILEGES;
 EOF
 
 #开启MySQL root 密码
-printr "Enabling MySQL root user, please reset the root user password...";
+INFO "Enabling MySQL root user, please reset the root user password...";
 echo -e "
 -----------------------------------------------------------------
 Please SET OPTIONS LIKE BELOW！ and remember your root password:
@@ -402,11 +378,11 @@ read input
 /usr/bin/mysql_secure_installation
 
 #初始化CDH数据库
-printr "ENTER THE ROOT PASSWORD YOU JUST SET UP to create the cdh databases, ...";
+INFO "ENTER THE ROOT PASSWORD YOU JUST SET UP to create the cdh databases, ...";
 mysql -u root -e "source ${TMP_DIR}/create_cdh_mysql_db.sql" -p
 
 #开始安装Cloudera Manager Deamon/Server/Agent RPM 包
-printr "Installing Cloudera Manager Deamon/Server/Agent...";
+INFO "Installing Cloudera Manager Deamon/Server/Agent...";
 
 if ! rpm -qa | grep cloudera-manager-daemons; then
     yum -y install ${PACKAGES_PATH}/${CLOUDERA_MANAGER_DEAMON} --nogpgcheck
@@ -425,11 +401,11 @@ else
 fi
 
 #初始化Cloudera Manager 数据库
-printr "Initing Cloudera Manager Database...";
+INFO "Initing Cloudera Manager Database...";
 /usr/share/cmf/schema/scm_prepare_database.sh mysql scm scm scm_password
 
 #复制parcel包和sha, manifest.json 文件到parcel文件夹
-printr "Preparing parcels for CDH installer...";
+INFO "Preparing parcels for CDH installer...";
 cp ${PACKAGES_PATH}/${CDH_PARCEL} /opt/cloudera/parcel-repo/
 cp ${PACKAGES_PATH}/${CDH_SHA} /opt/cloudera/parcel-repo/    #非常重要：将.sha1重命名为.sha文件
 cp ${PACKAGES_PATH}/${CDH_MANIFEST_JSON} /opt/cloudera/parcel-repo/
@@ -442,10 +418,10 @@ fi
 cd /opt/cloudera/parcel-repo || exit 1;
 chown cloudera-scm:cloudera-scm ./*
 
-printr "congratulations: Master setup finished";
+INFO "congratulations: Master setup finished";
 
 #启动
-printr "Starting Cloudera, please wait...";
+INFO "Starting Cloudera, please wait...";
 service cloudera-scm-server start
 service cloudera-scm-agent start
 }
@@ -454,36 +430,36 @@ service cloudera-scm-agent start
 #配置从服务器: $hostName, $serverIp
 setUpSlave() {
 
-printr "Slave setup start...";
+INFO "Slave setup start...";
 #复制密钥
-printr "copying rsa keys...";
+INFO "copying rsa keys...";
 scp -o StrictHostKeyChecking=no -r /root/.ssh root@$1:/root/
 
 #创建slave上的临时目录
-printr "creating temp dir in $1...";
+INFO "creating temp dir in $1...";
 ssh -t -o StrictHostKeyChecking=no root@$1 > /dev/null 2>&1 << EOF
 mkdir -p ${TMP_DIR};
 EOF
 
 #复制hosts文件
-printr "copying host file to temp dir in $1...";
+INFO "copying host file to temp dir in $1...";
 scp -o StrictHostKeyChecking=no ${TMP_DIR}/hosts root@$1:${TMP_DIR}/hosts > /dev/null 2>&1
 
 #复制rpm包 到slave的 临时目录
-printr "copying rpm packages to temp dir in $1...";
+INFO "copying rpm packages to temp dir in $1...";
 scp -o StrictHostKeyChecking=no ${PACKAGES_PATH}/${CLOUDERA_MANAGER_DEAMON} root@$1:${TMP_DIR}/ > /dev/null 2>&1
 scp -o StrictHostKeyChecking=no ${PACKAGES_PATH}/${CLOUDERA_MANAGER_AGENT} root@$1:${TMP_DIR}/ > /dev/null 2>&1
 
 #复制Java
-printr "copying oracle jdk packages to temp dir in $1...";
+INFO "copying oracle jdk packages to temp dir in $1...";
 scp -o StrictHostKeyChecking=no ${PACKAGES_PATH}/${ORACLE_JDK_PACKAGE} root@$1:${TMP_DIR}/ > /dev/null 2>&1
 
 #复制MySQL JDBC
-printr "copying mysql jdbc drivers to temp dir in $1...";
+INFO "copying mysql jdbc drivers to temp dir in $1...";
 scp -o StrictHostKeyChecking=no ${PACKAGES_PATH}/${MYSQL_JDBC_DRIVER} root@$1:${TMP_DIR}/ > /dev/null 2>&1
 
 #复制repo仓库
-printr "copying repo files in $1...";
+INFO "copying repo files in $1...";
 scp -o StrictHostKeyChecking=no /etc/yum.repos.d/cloudera-*.repo root@$1:${TMP_DIR}/
 
 #生成远程执行脚本并复制到slave的临时目录
@@ -532,11 +508,11 @@ if grep -qe 'JRE_HOME' /etc/profile; then
 fi
 
 #设置Java环境变量(所有节点)
-echo -e "
-export JAVA_HOME=/usr/java/\${jdkFolder}
-export JRE_HOME=/usr/java/\${jdkFolder}/jre
-export PATH=\$PATH:\$JAVA_HOME/bin:\$JRE_HOME/bin
-" >> /etc/profile
+echo '' >> /etc/profile
+echo '#FOR JAVA HOME' >> /etc/profile
+echo "export JAVA_HOME=/usr/java/${jdkFolder}" >> /etc/profile
+echo "export JRE_HOME=/usr/java/${jdkFolder}/jre" >> /etc/profile
+echo 'export PATH=$PATH:$JAVA_HOME/bin:$JRE_HOME/bin' >> /etc/profile
 
 rm -f /usr/bin/java;
 ln -s /usr/java/\${jdkFolder}/bin/java /usr/bin/java
@@ -607,12 +583,12 @@ service cloudera-scm-agent start
 exit 1;
 EOF
 
-printr "copying setup scripts to $1...";
+INFO "copying setup scripts to $1...";
 chmod +x build_slave.sh
 scp -o StrictHostKeyChecking=no build_slave.sh root@$1:${TMP_DIR}/ > /dev/null 2>&1
 
 #开始配置Slave
-printr "Start to configure slave: $1...";
+INFO "Start to configure slave: $1...";
 ssh -t -o StrictHostKeyChecking=no root@$1 "${TMP_DIR}/build_slave.sh";
 
 }
@@ -628,7 +604,7 @@ getHostnameList > ${TMP_DIR}/hosts;
 nodeIndex=0;
 for serverIp in `cat ${PROJECT_PATH}/ip.list`
 do
-    printr "deploying ${serverIp}...";
+    INFO "deploying ${serverIp}...";
     nodeIndex=`expr ${nodeIndex} + 1`;
     hostName="${NODE_NAME_PREFIX}${nodeIndex}";
 
@@ -640,5 +616,5 @@ do
     fi
 done
 
-printr "Congratulations! INSTALL FINISHED. open the http://${CURRENT_IP}:7180 to continue...";
+INFO "Congratulations! INSTALL FINISHED. open the http://${CURRENT_IP}:7180 to continue...";
 exit 1;

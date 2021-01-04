@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #Author: kenneth.fang@gaopeng.com
-#Version: 1.0.0
+#Version: 1.1.0
 #CDH集群追加计算节点脚本, 适用于Redhat/CentOS 7.x 64位版本，用于向已有集群追加节点
-#执行方式： 填写要安装CDH的节点IP清单， 并在主节点上执行本脚本,
+#执行方式： 填写要安装CDH的节点IP清单， 并在主节点上执行本脚本
 
 #集群机器名前缀, 可自定义，必须与已存在的集群机器名前缀一致
 NODE_NAME_PREFIX="cdh";
@@ -126,7 +126,7 @@ ensureVariable() {
 
 }
 
-
+# 开始远程安装节点
 setUpSlave() {
 
 printr "Slave setup start...";
@@ -207,11 +207,11 @@ if grep -qe 'JRE_HOME' /etc/profile; then
 fi
 
 #设置Java环境变量(所有节点)
-echo -e "
-export JAVA_HOME=/usr/java/\${jdkFolder}
-export JRE_HOME=/usr/java/\${jdkFolder}/jre
-export PATH=\$PATH:\$JAVA_HOME/bin:\$JRE_HOME/bin
-" >> /etc/profile
+echo '' >> /etc/profile
+echo '#FOR JAVA HOME' >> /etc/profile
+echo "export JAVA_HOME=/usr/java/${jdkFolder}" >> /etc/profile
+echo "export JRE_HOME=/usr/java/${jdkFolder}/jre" >> /etc/profile
+echo 'export PATH=$PATH:$JAVA_HOME/bin:$JRE_HOME/bin' >> /etc/profile
 
 rm -f /usr/bin/java;
 ln -s /usr/java/\${jdkFolder}/bin/java /usr/bin/java
@@ -231,24 +231,27 @@ fi
 
 #CDH 配置(所有节点)
 echo -e "\n##Setting up CDH configuration...";
-echo 10 > /proc/sys/vm/swappiness
+echo '10' > /proc/sys/vm/swappiness
 echo never > /sys/kernel/mm/transparent_hugepage/defrag
 echo never > /sys/kernel/mm/transparent_hugepage/enabled
 
 echo -e "
-echo 10 > /proc/sys/vm/swappiness
+echo '10' > /proc/sys/vm/swappiness
 echo never > /sys/kernel/mm/transparent_hugepage/defrag
 echo never > /sys/kernel/mm/transparent_hugepage/enabled
 " >> /etc/rc.local
 
-#安装MySQL JDBC Driver(所有节点)
+#安装MySQL JDBC Driver(主要是SPARK2使用)
 if [ ! -f /usr/share/java/mysql-connector-java.jar ]; then
 
 echo -e "\n##Installing MySQL JDBC Driver...";
 tar zxvf ${TMP_DIR}/${MYSQL_JDBC_DRIVER} -C ${TMP_DIR} > /dev/null 2>&1;
 mkdir -p /usr/share/java || exit 1;
-cp ${TMP_DIR}/mysql-connector-java-*/mysql-connector-java-*-bin.jar \
-/usr/share/java/mysql-connector-java.jar
+cp ${TMP_DIR}/mysql-connector-java-*/mysql-connector-java-*-bin.jar /usr/share/java/mysql-connector-java.jar
+#注意此处的SPARK2位置与cloudera安装位置相关
+if [ -d "/opt/cloudera/parcels/SPARK2/lib/spark2/jars" ]; then
+cp ${TMP_DIR}/mysql-connector-java-*/mysql-connector-java-*-bin.jar /opt/cloudera/parcels/SPARK2/lib/spark2/jars/mysql-connector-java.jar
+fi
 
 else
 echo -e "\n##MySQL JDBC Driver installed, jump to next step...";
